@@ -1,0 +1,356 @@
+package Droid;
+
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Scanner;
+import java.util.Random;
+
+abstract class Droid {
+    protected String clas;
+    protected String name;
+    protected int health;
+    protected int attack;
+    protected int defense;
+    protected int regeneration;
+
+    public Droid(String clas, String name, int health, int attack, int defense, int regeneration){
+        this.clas = clas;
+        this.name = name;
+        this.health = health;
+        this.attack = attack;
+        this.defense = defense;
+        this.regeneration = regeneration;
+    }
+    public String getName(){return name;}
+    public String getClas(){return clas;}
+    public abstract void specialAbility(Droid enemy);
+
+    public void attack(Droid enemy){
+        int damage = Math.max(0, this.attack - enemy.defense);
+        enemy.health -= damage;
+        System.out.println(this.name + " атакує " + enemy.name + " на " + damage + " одиниць урону.");
+    }
+    public boolean isAlive(){
+        return this.health > 0;
+    }
+    public void displayInfo(){
+        System.out.println("[Друїд класу: " +clas + " " + name + ", Здоров'я: " + health + ", Атака: " + attack + ", Захист: " + defense + "]");
+    }
+    public double Regen(){
+        return this.health + regeneration;
+    }
+}
+
+public class Main {
+    public static ArrayList<Droid> droids = new ArrayList<>();
+    public static void main(String[] args) {
+        Scanner scan = new Scanner(System.in);
+
+        while (true) {
+            System.out.println("\n--- Головне меню ---");
+            System.out.println("1. Створити нового друїда");
+            System.out.println("2. Вивести список друїдів");
+            System.out.println("3. Бій 1 на 1");
+            System.out.println("4. Бій 4 на 4");
+            System.out.println("5. Відтворити бій з файлу");
+            System.out.println("6. Вихід");
+            System.out.print("Ваш вибір: ");
+            int choice = scan.nextInt();
+            scan.nextLine();
+
+            switch (choice) {
+                case 1:
+                    Menu();
+                    break;
+                case 2:
+                    showDroids();
+                    break;
+                case 3:
+                    try {
+                        Battle1x1();
+                    } catch (IOException e) {
+                        System.out.println("Помилка запису бою: " + e.getMessage());
+                    }
+                    break;
+                case 4:
+                    try {
+                        Battle4x4();
+                    } catch (IOException e) {
+                        System.out.println("Помилка запису бою: " + e.getMessage());
+                    }
+                    break;
+                case 5:
+                    playBattleFromFile();
+                    break;
+                case 6:
+                    System.out.println("Вихід з програми.");
+                    System.exit(0);
+                    break;
+                default:
+                    System.out.println("Неправильний вибір, спробуйте ще раз.");
+            }
+        }
+    }
+
+    public static void Menu() {
+        Scanner scan = new Scanner(System.in);
+
+        System.out.println("Виберіть клас друїда");
+        System.out.println("1. Лицар");
+        System.out.println("2. Лучник");
+        System.out.println("3. Маг");
+
+        int choice = scan.nextInt();
+        scan.nextLine();
+
+        System.out.println("Введіть ім'я друїда");
+        String name = scan.nextLine();
+
+        Droid droid = null;
+
+        switch (choice) {
+            case 1:
+                droid = new Knight("Лицар", name);
+                break;
+            case 2:
+                droid = new Archer("Лучник", name);
+                break;
+            case 3:
+                droid = new Mage("Маг", name);
+                break;
+            default:
+                System.out.println("Неправильне значення");
+                System.exit(0);
+        }
+
+        System.out.println("Ваш персонаж успішно створений");
+        droids.add(droid);
+        droid.displayInfo();
+    }
+
+    public static void showDroids() {
+        if (droids.isEmpty()) {
+            System.out.println("Список друїдів порожній");
+        } else {
+            System.out.println("Список друїдів: ");
+            for (Droid droid : droids) {
+                System.out.println("- " + droid.getClas() + " " + droid.getName());
+            }
+        }
+    }
+
+    public static void Battle1x1() throws IOException {
+        Scanner scan = new Scanner(System.in);
+        if (droids.size() < 2) {
+            System.out.println("Недостатньо учасників");
+            return;
+        }
+        System.out.println("Виберіть першого учасника");
+        showDroids();
+        int firstIndex = scan.nextInt() - 1;
+        scan.nextLine();
+
+        System.out.println("Виберіть другого учасника");
+        showDroids();
+        int secondIndex = scan.nextInt() - 1;
+        scan.nextLine();
+
+        Droid droid1 = droids.get(firstIndex);
+        Droid droid2 = droids.get(secondIndex);
+        int cooldown1 = 0;
+        int cooldown2 = 0;
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("battle_log.txt"))) {
+            while (droid1.isAlive() && droid2.isAlive()) {
+                droid1.attack(droid2);
+                writer.write(droid1.getName() + " атакує " + droid2.getName() + "\n");
+                if (cooldown1 == 0) {
+                    droid1.specialAbility(droid2);
+                    writer.write(droid1.getName() + " використовує спецздібність проти " + droid2.getName() + "\n");
+                    cooldown1 = 3;
+                }
+
+                if (!droid2.isAlive()) {
+                    writer.write(droid2.getName() + " програв.\n");
+                    break;
+                }
+
+                droid2.attack(droid1);
+                writer.write(droid2.getName() + " атакує " + droid1.getName() + "\n");
+                if (cooldown2 == 0) {
+                    droid2.specialAbility(droid1);
+                    writer.write(droid2.getName() + " використовує спецздібність проти " + droid1.getName() + "\n");
+                    cooldown2 = 3;
+                }
+
+                if (!droid1.isAlive()) {
+                    writer.write(droid1.getName() + " програв.\n");
+                    break;
+                }
+
+                cooldown1--;
+                cooldown2--;
+            }
+
+            if (droid1.isAlive()) {
+                writer.write(droid1.getName() + " переміг!\n");
+                System.out.println(droid1.getName() + " переміг!");
+            } else {
+                writer.write(droid2.getName() + " переміг!\n");
+                System.out.println(droid2.getName() + " переміг!");
+            }
+
+            writer.write("--- Битва завершена! ---\n");
+            System.out.println("--- Битва завершена! ---");
+        }
+    }
+
+    public static void Battle4x4() throws IOException {
+        Scanner scan = new Scanner(System.in);
+
+        if (droids.size() < 8) {
+            System.out.println("Недостатньо учасників для командної битви (потрібно 8).");
+            return;
+        }
+
+        System.out.println("Виберіть 4 учасників для першої команди:");
+        showDroids();
+        ArrayList<Droid> team1 = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            System.out.print("Виберіть учасника №" + (i + 1) + ": ");
+            int index = scan.nextInt() - 1;
+            scan.nextLine();
+            team1.add(droids.get(index));
+        }
+
+        System.out.println("Виберіть 4 учасників для другої команди:");
+        showDroids();
+        ArrayList<Droid> team2 = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            System.out.print("Виберіть учасника №" + (i + 1) + ": ");
+            int index = scan.nextInt() - 1;
+            scan.nextLine();
+            team2.add(droids.get(index));
+        }
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("battle_log_4x4.txt"))) {
+            while (isTeamAlive(team1) && isTeamAlive(team2)) {
+                for (Droid droid : team1) {
+                    if (droid.isAlive()) {
+                        Droid target = getRandomAliveDroid(team2);
+                        if (target != null) {
+                            droid.attack(target);
+                            writer.write(droid.getName() + " з команди 1 атакує " + target.getName() + " з команди 2\n");
+
+                            if (!target.isAlive()) {
+                                writer.write(target.getName() + " з команди 2 загинув.\n");
+                            }
+                        }
+                    }
+                }
+
+                for (Droid droid : team2) {
+                    if (droid.isAlive()) {
+                        Droid target = getRandomAliveDroid(team1);
+                        if (target != null) {
+                            droid.attack(target);
+                            writer.write(droid.getName() + " з команди 2 атакує " + target.getName() + " з команди 1\n");
+
+                            if (!target.isAlive()) {
+                                writer.write(target.getName() + " з команди 1 загинув.\n");
+                            }
+                        }
+                    }
+                }
+                displayTeamInfo(team1, "Команда 1 ");
+                displayTeamInfo(team1, "Команда 2 ");
+            }
+
+            writer.write("--- Командний бій завершено! ---\n");
+            System.out.println("--- Командний бій завершено! ---");
+        }
+    }
+
+    public static Droid getRandomAliveDroid(ArrayList<Droid> team) {
+        ArrayList<Droid> aliveDroids = new ArrayList<>();
+        for (Droid droid : team) {
+            if (droid.isAlive()) {
+                aliveDroids.add(droid);
+            }
+        }
+        if (aliveDroids.isEmpty()) {
+            return null;
+        }
+        int randomIndex = (int) (Math.random() * aliveDroids.size());
+        return aliveDroids.get(randomIndex);
+    }
+
+    public static void playBattleFromFile() {
+        try (BufferedReader reader = new BufferedReader(new FileReader("battle_log.txt"))) {
+            String line;
+            System.out.println("\n--- Відтворення бою ---");
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+        } catch (IOException e) {
+            System.out.println("Помилка читання файлу: " + e.getMessage());
+        }
+    }
+
+
+    public static boolean isTeamAlive(ArrayList<Droid> team) {
+        for (Droid droid : team) {
+            if (droid.isAlive()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static void displayTeamInfo(ArrayList<Droid> team, String teamName) {
+        System.out.println("Стан " + teamName + ":");
+        for (Droid droid : team) {
+            droid.displayInfo();
+        }
+        System.out.println("-------------------------");
+    }
+}
+
+class Knight extends Droid {
+    private Random random = new Random();
+    public Knight(String clas, String name) {
+        super("Лицар", name, 180, 20, 15, 10);
+    }
+
+    @Override
+    public void specialAbility(Droid enemy) {
+        System.out.println(this.name + " використовує здатність 'Щит', збільшуючи захист.");
+        this.health += 10 + (int)(Math.random() * 6);
+    }
+}
+
+class Archer extends Droid {
+    private Random random = new Random();
+    public Archer(String clas, String name) {
+        super("Лучник", name, 140, 30, 5, 7);
+    }
+
+    @Override
+    public void specialAbility(Droid enemy) {
+        System.out.println(this.name + " використовує здатність 'Дальній постріл' , збільшивши урон.");
+        enemy.health -= 25 + (int)(Math.random() * 11);
+    }
+}
+
+class Mage extends Droid {
+    private Random random = new Random();
+    public Mage(String clas, String name) {
+        super("Маг", name, 135, 25, 10, 5);
+    }
+
+    @Override
+    public void specialAbility(Droid enemy) {
+        System.out.println(this.name + " використовує здатність 'Вогняна куля'.");
+        enemy.health -= 20 + (int)(Math.random() * 16);
+    }
+}
